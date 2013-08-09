@@ -1,0 +1,29 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+	<title>Tidal Ranges</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> 
+	<link rel="stylesheet" href="style.css" />
+	<link rel="stylesheet" href="leaflet.css" />
+<body> 
+  <div id="map"></div>
+  <script src=" jquery-1.10.2.min.js" charset="utf-8"></script>
+  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<script src="leaflet.js"></script>
+  <script>
+
+  	var map = L.map('map').setView([12.109913, -68.937321], 15);
+
+    L.tileLayer('http://a.tiles.mapbox.com/v3/acesuares.map-pmegbp99/{z}/{x}/{y}.png', {
+      minZoom: 11,
+      maxZoom: 33    
+    }).addTo(map);
+
+    $.getJSON('ports.json', function(data) {
+      new L.geoJson(data).addTo(map);
+    });
+  
+  </script>
+</head> 
+</body>
+</html>
