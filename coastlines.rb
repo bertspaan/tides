@@ -5,55 +5,31 @@ require 'sequel'
 
 DB = Sequel.connect('postgres://localhost/tidalrange?user=postgres&password=postgres')
 
-NEAREST_POINT = <<-SQL
+POINTS = <<-SQL
   SELECT 
-    gid, i, ST_Distance(Geography(geom), 
-    Geography(ST_SetSRID(ST_MakePoint(?, ?), 4326))) / 1000 AS distance 
+    ST_X(geom) AS lon, ST_Y(geom) AS lat 
   FROM 
-    coastline_points
-  WHERE 
-    ST_Distance(Geography(geom), Geography(ST_SetSRID(ST_MakePoint(?, ?), 4326))) / 1000 < 10
-  ORDER BY 
-    distance
-  LIMIT 1
+    coastline_points 
+  WHERE
+    gid = ?
 SQL
 
-ports = []
-JSON.parse(File.open('ports.geojson').read)["features"].each { |port|
-  if port.has_key? "geometry"
-    port_id = port["properties"]["port_id"]
-    lon, lat = port["geometry"]["coordinates"]    
-    nearest_point = DB[NEAREST_POINT, lon, lat, lon, lat].first
-    if nearest_point
-      puts port_id, nearest_point
-    end
+JSON.parse(File.open('nearest_points.json').read).each { |gid, nearest_points|  
+  nearest_points = nearest_points.map {|i, port_id| [i.to_i - 1, port_id] }.sort
+  puts nearest_points.inspect 
+
+  nearest_points.each_with_index { |(i, port_id), index|
+
+    next_index = index + 1
+    next_index = 0 if next_index >= nearest_points.length
+    next_i = nearest_points[next_index][0]
+    puts "index: #{index}, next_index: #{next_index}"
+    puts "i: #{i}, next_i: #{next_i}"
     
-    #lon, lat, lon, lat
-
-
-
-  end
+  }
+  #points = DB[POINTS, gid].all
+  #puts points.inspect
+  
+  #puts nearest_points.inspect #Hash[nearest_points.sort]
 }
-
-
-# zoek dichtstbijzijnde stuk coastline. 
-# Als < 50 km.
-# Zoek dichstbijzijnde punt op stuk lijn
-# Onthoud index
-# 
-# 
-# 
-# Breek kustlijnen op van gevonden index tot gevonden index.
-
-
-# geojson = {
-#   "type" => "FeatureCollection",
-#   "features" => ports
-# }
-# 
-# File.open("ports_geometry.geojson", 'w') { |file| file.write(JSON.pretty_generate(geojson)) }
-# puts "Done..."
-
-
-
 
