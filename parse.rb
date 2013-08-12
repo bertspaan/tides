@@ -1,3 +1,5 @@
+#!/usr/local/bin/ruby
+
 require 'nokogiri'
 require 'json'
 
@@ -36,10 +38,12 @@ Dir["files/*.html"].each { |file|
     
     ports << {
       :type => "Feature",
-      :port_id => port_id,
-      :name => name,
-      :country => country,
-      :tides =>  Hash[times.zip(tides)]
+      :properties => {
+        :port_id => port_id,
+        :name => name,
+        :country => country,
+        :tides =>  Hash[times.zip(tides)]
+      } 
     }    
     
   end  
@@ -50,5 +54,5 @@ geojson = {
   "features" => ports
 }
 
-File.open("ports.json", 'w') { |file| file.write(JSON.pretty_generate(geojson)) }
+File.open("ports.geojson", 'w') { |file| file.write(JSON.pretty_generate(geojson)) }
 puts "Done..."

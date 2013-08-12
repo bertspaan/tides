@@ -1,4 +1,4 @@
-#!/usr/local/Cellar/ruby/1.9.3-p327/bin/ruby
+#!/usr/local/bin/ruby
 
 require 'faraday'
 
