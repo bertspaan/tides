@@ -15,11 +15,15 @@
   	var map = L.map('map').setView([12.109913, -68.937321], 15);
 
     L.tileLayer('http://a.tiles.mapbox.com/v3/acesuares.map-pmegbp99/{z}/{x}/{y}.png', {
-      minZoom: 11,
+      minZoom: 1,
       maxZoom: 33    
     }).addTo(map);
 
-    $.getJSON('ports.json', function(data) {
+    // $.getJSON('https://rawgithub.com/bertspaan/tidal-range/master/ports.json', function(data) {
+    //   new L.geoJson(data).addTo(map);
+    // });
+    
+    $.getJSON('coastline/ne_50m_coastline.geojson', function(data) {
       new L.geoJson(data).addTo(map);
     });
   
