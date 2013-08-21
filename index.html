@@ -2,28 +2,63 @@
 <html lang="en">
 <head>
   <title>Tidal Range</title>
-  <script type="text/javascript" src="http://mbostock.github.com/d3/d3.v2.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://d3js.org/topojson.v1.min.js"></script>
   <style type="text/css">
-    #uk {
+    body{
+      margin: 0;
+      padding: 0;
+    
+    }
+    #vis {
+      margin: 0;
+      padding: 0;
       stroke: #2CA25F;
       stroke-width: 0.5;
       fill: none;
+      width: 100%;
+      height: 100%;
+      position: absolute;
     }
   </style>
 </head>
 <body>
   <div id="vis"></div>
   <script type="text/javascript">
+  
+    // Average time between low and high tide is approx. 6h20
+    var INTERVAL = 6 * 60 + 20;
+  
     var w = 960;
-    var h = 500;
+    var h = 900;
     var proj = d3.geo.mercator();
-    var path = d3.geo.path().projection(proj);
+    var path = d3.geo.path().projection(proj);    
+    var color = d3.scale.category20();
    
-    var simplify = d3.simplify()
-        .projection(d3.geo.mercator().scale(1300).translate([450, 300]));
+    //var simplify = d3.simplify()
+    //    .projection(d3.geo.mercator().scale(1300).translate([450, 300]));
     
     var t = proj.translate(); // the projection's default translation
     var s = proj.scale() // the projection's default scale
+    
+    var firstPoints = function(geojson) {
+      points = []
+      geojson.features.forEach(function(feature) {
+        point = {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: feature.geometry.coordinates[0]
+          },
+          properties: feature.properties
+        };
+        points.push(point);
+      });
+      return {
+        type: "FeatureCollection",
+        features: points.slice(1, 500)
+      };
+    };
 
     var map = d3.select("#vis").append("svg:svg")
         .attr("width", w)
@@ -33,22 +68,95 @@
    
     
     var svg = map.append("svg:g");
-
-    d3.json("coastlines.geojson", function (json) {
     
-      // var m = us.coordinates.reduce(function(m, polygon) {
-      //   return m + polygon.reduce(function(m, lineString) {
-      //     return m + lineString.length;
-      //   }, 0);
-      // }, 0);
-      // 
-      // simplify(us);
-      // redraw();
+    // {
+    //   "type": "FeatureCollection",
+    //   "features": [
+    //     {
+    //       "type": "Feature",
+    //       "properties": {
+    //         "port_id": "0001",
+    //         "name": "St. Mary's",
+    //         "country": "England",
+    //         "tides": {
+    //           "04:17": 5.1,
+    //           "10:37": 1.2,
+    //           "16:34": 5.3,
+    //           "23:01": 1.1,
+    //           "04:51": 5.2,
+    
+    
+    ports = {}
+    d3.json("ports.geojson", function (error, json) {
+      json.features.forEach(function(feature) {
+        var name = feature.properties.name;
+        var port_id = feature.properties.port_id;
+        var tides = feature.properties.tides;
+        
+        var tideTimes = Object.keys(tides);
+        var tideHeights = tideTimes.map(function (key) {
+            return tides[key];
+        });  
+              
+        var low = Math.min.apply(null, tideHeights);
+        var high = Math.max.apply(null, tideHeights);
+        
+        startString = tideHeights[0] < tideHeights[1] ? tideTimes[0] : tideTimes[1];
+        var match = /(\d+):(\d+)/.exec(startString);
+        if (match && low && high) {
+          var start = parseInt(match[1]) * 60 + parseInt(match[2]);        
+        
+          ports[port_id] = {
+            name: name,
+            start: start,
+            low: low,
+            high: high
+          }
+        }
+      });
+      console.log( JSON.stringify(ports,null,2)  );
+    });
+    
+
+    d3.json("coastlines.topojson", function (error, json) {
+      var points = firstPoints(topojson.feature(json, json.objects.coastlines));
+    
+      var s = svg.selectAll("path")
+          .data(points.features)
+        .enter()
+          .append('path')
+          .attr('d', path);
+
       
-      avg.selectAll("path")
-          .data(json.features)
-        .enter().append("svg:path")
-          .attr("d", path);
+      
+      //http://creativejs.com/resources/requestanimationframe/
+      var fps = 10;
+      function draw() {
+          setTimeout(function() {
+              requestAnimationFrame(draw);
+              
+              var c = color(Math.random() * 10);
+              s.transition()
+                  .duration(1000 / fps)
+                  .attr("fill", c);
+              
+              
+          }, 1000 / fps);
+      }
+      draw();
+      
+      
+          
+       //      
+      // function hond(selection, duration) {
+      // 
+      //     
+      //   setTimeout(function() { hond(selection, duration); }, duration);
+      // 
+      //   //setTimeout(function() { hond(selection, duration); }, (Math.random() + 1) * duration);
+      // }
+
+
     });
 
     function redraw() {
@@ -64,13 +172,8 @@
       proj.scale(s * d3.event.scale);
 
       // redraw the map
-      uk.selectAll("path").attr("d", path);
+      svg.selectAll("path").attr("d", path);
 
-      // redraw the x axis
-      xAxis.attr("x1", tx).attr("x2", tx);
-
-      // redraw the y axis
-      yAxis.attr("y1", ty).attr("y2", ty);
     }
   </script>
 </body>
