@@ -27,7 +27,7 @@
   <script type="text/javascript">
   
     // Average time between low and high tide is approx. 6h20
-    var INTERVAL = 6 * 60 + 20;
+    var PERIOD = 6 * 60 + 20;
   
     var w = 960;
     var h = 900;
@@ -56,7 +56,8 @@
       });
       return {
         type: "FeatureCollection",
-        features: points.slice(1, 500)
+        features: geojson.features//.slice(1, 500)
+        //features: points.slice(1, 500)
       };
     };
 
@@ -68,25 +69,38 @@
    
     
     var svg = map.append("svg:g");
+        
     
-    // {
-    //   "type": "FeatureCollection",
-    //   "features": [
-    //     {
-    //       "type": "Feature",
-    //       "properties": {
-    //         "port_id": "0001",
-    //         "name": "St. Mary's",
-    //         "country": "England",
-    //         "tides": {
-    //           "04:17": 5.1,
-    //           "10:37": 1.2,
-    //           "16:34": 5.3,
-    //           "23:01": 1.1,
-    //           "04:51": 5.2,
+    ports = {}    
+    var tide = function(t, start, high, low) {
+      var amplitude = (high - low) / 2;
+      return Math.sin((t + start) / PERIOD * Math.PI) * amplitude + amplitude;
+    };
     
     
-    ports = {}
+    
+    var color, colors = [
+      "green",
+      "orange",
+      "yellow",
+      "pink",
+      "blue",
+      "green",
+      "yellow",
+      "red",
+      "purple"
+      // "rgb(215,48,39)",
+      // "rgb(244,109,67)",
+      // "rgb(253,174,97)",
+      // "rgb(254,224,144)",
+      // "rgb(255,255,191)",
+      // "rgb(224,243,248)",
+      // "rgb(171,217,233)",
+      // "rgb(116,173,209)",
+      // "rgb(69,117,180)"    
+    ];
+    
+    var minTide = Number.POSITIVE_INFINITY, maxTide = Number.NEGATIVE_INFINITY;
     d3.json("ports.geojson", function (error, json) {
       json.features.forEach(function(feature) {
         var name = feature.properties.name;
@@ -101,6 +115,13 @@
         var low = Math.min.apply(null, tideHeights);
         var high = Math.max.apply(null, tideHeights);
         
+        if (low < minTide) {
+          minTide = low;
+        }
+        if (high > maxTide) {
+          maxTide = high;
+        }
+        
         startString = tideHeights[0] < tideHeights[1] ? tideTimes[0] : tideTimes[1];
         var match = /(\d+):(\d+)/.exec(startString);
         if (match && low && high) {
@@ -110,13 +131,17 @@
             name: name,
             start: start,
             low: low,
-            high: high
+            high: high            
           }
         }
       });
-      console.log( JSON.stringify(ports,null,2)  );
+      
+      color = d3.scale.linear()
+          .domain([minTide,maxTide / 2])
+          .range(colors);
+          
     });
-    
+        
 
     d3.json("coastlines.topojson", function (error, json) {
       var points = firstPoints(topojson.feature(json, json.objects.coastlines));
@@ -125,23 +150,40 @@
           .data(points.features)
         .enter()
           .append('path')
-          .attr('d', path);
-
+          .attr('d', path)
+          .attr("stroke-width", "2px");
       
       
       //http://creativejs.com/resources/requestanimationframe/
-      var fps = 10;
+      var t = 0;
+      var fps = 25;
       function draw() {
-          setTimeout(function() {
-              requestAnimationFrame(draw);
+        setTimeout(function() {
+          requestAnimationFrame(draw);
               
-              var c = color(Math.random() * 10);
-              s.transition()
-                  .duration(1000 / fps)
-                  .attr("fill", c);
+          s.transition()
+              .duration(1000 / fps)
+              .attr("stroke", function(d) {
+                var port_id = d.properties.ports[0];
+                if (ports[port_id]) {
+                  var start = ports[port_id].start;
+                  var high = ports[port_id].high;
+                  var low = ports[port_id].low;
+                  
+                  var h = tide(t, start, high, low);
+                  
+                  var v = 20 + h * 40;
+                  var c = color(h);
+                  return c;
+
+                }
+                
+                return "red";
+              });
               
+          t += 50;
               
-          }, 1000 / fps);
+        }, 1000 / fps);
       }
       draw();
       
